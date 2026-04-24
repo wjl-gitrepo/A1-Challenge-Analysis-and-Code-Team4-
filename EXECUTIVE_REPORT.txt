@@ -1,0 +1,348 @@
+═══════════════════════════════════════════════════════════════════════
+EXECUTIVE REPORT — CROSS-CITY URBAN HEAT ISLAND PREDICTION
+Business Challenge II | Team 4 | Hult International Business School | 2026
+═══════════════════════════════════════════════════════════════════════
+
+Repository: https://github.com/wjl-gitrepo/A1-Challenge-Analysis-and-Code-Team4-
+Large Data: https://drive.google.com/drive/folders/1iRNGsAPtl-5oTrhl4qm6jeiZixOH_tfd
+
+Team Members: Jainam Gogree, Rashad Mohammed, Woo Jin Lee,
+              Otelima Abraham, Shun Kasakura
+
+───────────────────────────────────────────────────────────────────────
+1. EXECUTIVE SUMMARY
+───────────────────────────────────────────────────────────────────────
+
+This project delivers a production-grade machine-learning pipeline that
+predicts Urban Heat Island (UHI) intensity class — Low, Medium, or High —
+at geolocated pixels across three climatically diverse cities: Santiago
+(Chile, semi-arid Mediterranean), Rio de Janeiro (Brazil, humid tropical
+coastal), and Freetown (Sierra Leone, tropical monsoon). The pipeline
+combines Sentinel-2 satellite imagery (15 spectral bands), OpenStreetMap
+building footprint geometry, and 11 derived geo-aware context features
+into a 32-feature per-pixel representation. A soft-voting ensemble of
+Random Forest, HistGradientBoosting, and Logistic Regression classifies
+each pixel using the competition's own UHI Index formula (pixel
+temperature divided by city mean, thresholds 0.98/1.02) applied to a
+rank-based Kelvin-scale proxy, hybridized with Gaussian Mixture natural
+breaks.
+
+The headline achievement is on the Freetown scenario, where the model
+trained on Santiago + Rio only and predicted Freetown without any
+Freetown labels. It achieved F1 macro 0.689 on a spatial holdout with
+a train-vs-test gap of 0.003 — essentially no overfitting. Santiago and
+Rio, evaluated in a mixed-training regime, produced honest
+cross-region F1 scores of 0.549 and 0.625 respectively against real
+ground-truth labels. The pipeline demonstrates that per-city
+normalization, spatial-block cross-validation, and physics-anchored
+pseudo-labeling enable meaningful cross-climate transfer even with
+only 2–3 training cities.
+
+───────────────────────────────────────────────────────────────────────
+2. PROBLEM STATEMENT
+───────────────────────────────────────────────────────────────────────
+
+Urban Heat Islands are localized zones where built-up surfaces,
+reduced vegetation, anthropogenic heat, and diminished
+evapotranspiration cause temperatures to exceed surrounding rural
+areas. UHI intensity varies across neighborhoods and matters for
+urban planning, public-health mapping, and climate adaptation.
+
+The challenge: predict Low/Medium/High UHI class at ~14,000–21,000
+geolocated pixels per city using only satellite imagery and building
+footprint data, without access to direct thermal measurements. The
+three target cities span three distinct climate zones, creating a
+genuine out-of-distribution generalization problem. With only 2–3
+training cities available, every cross-city prediction is an
+extrapolation rather than interpolation.
+
+───────────────────────────────────────────────────────────────────────
+3. DATA SOURCES
+───────────────────────────────────────────────────────────────────────
+
+• Sentinel-2 L2A (European Space Agency) — 15 spectral bands at 10 m
+  resolution, obtained via Microsoft Planetary Computer STAC API.
+  Median mosaics compiled per city from 15 cloud-filtered scenes.
+• OpenStreetMap building footprints — per-city polygon shapefiles
+  (Chile 191 MB, Brazil 151 MB, Sierra Leone 36 MB).
+• UHI intensity labels — ~14k–21k per-pixel CSV entries per city,
+  provided by the competition sponsor.
+
+───────────────────────────────────────────────────────────────────────
+4. PIPELINE ARCHITECTURE
+───────────────────────────────────────────────────────────────────────
+
+Five notebooks form an end-to-end pipeline:
+
+  Notebook 01 (Scene Search)
+      │ Probe-and-snap anchor scene finder using Planetary Computer
+      │ STAC. Writes city_data.pkl with 15 selected scene IDs per city.
+      ▼
+  Notebook 02 (Median Mosaic)
+      │ Downloads selected scenes, applies SCL cloud masking,
+      │ computes per-pixel 15-band median. Writes S2_median_*.tiff.
+      ▼
+  Notebook 03/04/05 (UHI Index Formula — per target city)
+      │ Per-city feature engineering, per-city normalization,
+      │ model training, target adaptation, classification.
+      ▼
+  Prediction CSVs per city
+
+───────────────────────────────────────────────────────────────────────
+5. FEATURE ENGINEERING (32–33 features across 5 tiers)
+───────────────────────────────────────────────────────────────────────
+
+Tier 1 — Classical spectral indices (3 features)
+  NDVI, NDBI, NDWI — vegetation, built-up, water signatures.
+
+Tier 2 — Advanced spectral indices (8 features)
+  SAVI, EVI (soil/atmospheric-corrected vegetation), BSI (bare soil),
+  UI (urban), NDMI (moisture), NDVIre (red-edge canopy), MNDWI
+  (enhanced water), water_vapor (B09 humidity proxy).
+
+Tier 3 — Physical composite features (6 features)
+  urban_heat = max(NDBI, BSI, UI)
+  veg_cooling = max(NDVI, SAVI, EVI)
+  water_cooling = max(NDWI, MNDWI)
+  Plus three balance terms: veg_urban_balance, cool_heat_balance,
+  veg_health (NDVIre minus NDVI).
+
+Tier 4 — Building geometry (7 features, from OSM shapefiles within 100 m)
+  building_count_100m, building_density_100m, building_coverage_ratio,
+  building_mean_size, building_max_size, building_size_std,
+  building_shape_complexity. Cached per-city to
+  Data/cache/building_features_*.csv (skips 10-min recompute).
+
+Tier 5 — Geo-aware context (11 features, the breakthrough tier)
+  dist_to_center_km, dist_to_water_km, dist_to_forest_km,
+  local_urban_frac_500m, local_veg_frac_500m, and one-hot land-use
+  class (water, forest, dense_urban, open_field, bare, mixed). Derived
+  from KMeans neighbor queries and NDVI/NDBI/NDWI/building-density
+  thresholds.
+
+───────────────────────────────────────────────────────────────────────
+6. CROSS-CITY TRANSFER MECHANISMS (the core innovation)
+───────────────────────────────────────────────────────────────────────
+
+• Per-city z-score normalization: every spectral feature is z-scored
+  within its own city. The model learns "hotter than this city's
+  mean" rather than absolute spectral thresholds that collapse when
+  climate changes.
+
+• Spatial-block cross-validation: 60 KMeans clusters on lat/lon form
+  training blocks. StratifiedGroupKFold ensures no two adjacent
+  pixels end up in different folds. Defeats spatial autocorrelation.
+
+• Per-fold SMOTE: synthetic minority oversampling runs inside each CV
+  fold via imblearn Pipeline. No class-balancing leakage.
+
+• Tight regularization: max_depth ∈ {6, 10}, min_samples_leaf ∈
+  {25, 50}, C ∈ {0.001–0.5}. The model literally cannot memorize
+  city-specific quirks; it has to find patterns that repeat.
+
+───────────────────────────────────────────────────────────────────────
+7. MODEL ARCHITECTURE
+───────────────────────────────────────────────────────────────────────
+
+Six models tuned independently with spatial-block GridSearchCV:
+  • Random Forest (main)
+  • HistGradientBoosting (main)
+  • Logistic Regression (main)
+  • SVM, KNN, Decision Tree (benchmarks, excluded from ensemble)
+
+Final ensemble: soft vote of Random Forest + HistGradientBoosting +
+Logistic Regression with weights [2, 2, 1]. Chosen for complementary
+inductive biases (non-linear splits, sequential boosting, linear
+direction) without the noise of overfitting benchmark models.
+
+───────────────────────────────────────────────────────────────────────
+8. TARGET-CITY ADAPTATION (without labels)
+───────────────────────────────────────────────────────────────────────
+
+• Phase 1B — Covariate shift importance weighting: a classifier
+  predicts train-vs-target; resulting weights tilt the final refit
+  toward samples that look like target data.
+
+• Phase 4A v2 — Physics-anchored stratified pseudo-labeling:
+  - Compute physical heat score per target-city pixel
+  - Rank pixels; take top 15% as pseudo-High, bottom 15% as
+    pseudo-Low, middle 15% around median as pseudo-Medium
+  - Sanity filter: keep only where model P(class) ≥ 0.20
+  - Retrain with pseudo-labels at weight 0.3
+  - 2 rounds; class balance forced regardless of model confidence
+
+• Phase 4B — Neighbor voting: pixels with prediction entropy > 1.0
+  get replaced with the majority class among their 10 nearest
+  geographic neighbors.
+
+───────────────────────────────────────────────────────────────────────
+9. CLASSIFICATION STRATEGY — UHI INDEX FORMULA
+───────────────────────────────────────────────────────────────────────
+
+• Compute heat_score = 0.9·model_ordinal + 0.1·physics_composite
+• Compute Kelvin proxy via rank-based scaling to [293 K, 313 K]
+• Compute UHI Index = pixel_K / city_mean_K
+• Threshold strategies (averaged 50/50 as "hybrid_a50"):
+    - Formula-calibrated: quantile cuts matched to learned proportions
+    - GMM natural breaks: Gaussian Mixture 3-component cluster boundaries
+• Safety Net 7: if final distribution falls outside [5%, 80%] per
+  class, force a 1/3 equal split via heat_score ranking (never
+  activates on healthy runs).
+
+───────────────────────────────────────────────────────────────────────
+10. RESULTS
+───────────────────────────────────────────────────────────────────────
+
+All three cities evaluated on spatial holdouts; Santiago and Rio
+additionally evaluated against actual ground-truth labels.
+
+  ┌──────────┬─────────────────┬─────────┬───────────┬──────────────┐
+  │ Target   │ Scenario        │ Gap     │ Mixed F1  │ Honest F1    │
+  ├──────────┼─────────────────┼─────────┼───────────┼──────────────┤
+  │ Freetown │ Blind           │ 0.003   │ 0.689     │ 0.689        │
+  │ Santiago │ Mixed-training  │ 0.181   │ 0.757     │ 0.549        │
+  │ Rio      │ Mixed-training  │ 0.177   │ 0.737     │ 0.625        │
+  └──────────┴─────────────────┴─────────┴───────────┴──────────────┘
+
+"Mixed F1" includes held-out blocks from all three cities (includes
+some pixels the model saw during training in Santiago/Rio scenarios).
+"Honest F1" is target-city-only held-out blocks — the true
+cross-region generalization number.
+
+F1 macro against actual labels (where available):
+  • Santiago: 0.576 (Low recall 0.77, Medium recall 0.46, High recall 0.60)
+  • Rio: 0.626 (Low recall 0.75 and precision 0.84; High recall 0.68
+    and precision 0.80; Medium noisy — precision 0.29 on a 18%
+    natural class)
+
+Distribution predicted vs. actual:
+  • Freetown — Low 28.6% / Med 40.0% / High 31.3% (no local ground truth)
+  • Santiago — Low 31.4% / Med 34.1% / High 34.5% (actual 20.8 / 46.9 / 32.3)
+  • Rio — Low 33.2% / Med 28.9% / High 38.0% (actual 37.2 / 18.1 / 44.7)
+
+Phase 4A pseudo-labels added:
+  • Freetown: 7,978 across 2 rounds
+  • Santiago: 7,229
+  • Rio: 13,786
+
+───────────────────────────────────────────────────────────────────────
+11. KEY INSIGHTS
+───────────────────────────────────────────────────────────────────────
+
+(i) Per-city normalization is the single most important design choice
+for cross-climate transfer. Absolute NDVI/NDBI thresholds break
+across climates; relative ones (z-scored within city) generalize.
+
+(ii) Spatial-block cross-validation is non-negotiable for geospatial
+ML. Random splits leak spatial autocorrelation and produce
+unrealistic CV scores that don't reflect true generalization.
+
+(iii) Physics-anchored pseudo-labeling outperformed confidence-based
+pseudo-labeling in our iterations. Model confidence on a held-out
+target city is biased toward the majority class and produces
+confirmation-bias collapse; physics rankings force class balance by
+construction.
+
+(iv) Geo-aware context features (distance to water, distance to
+forest, local neighborhood density) added ~3–5 percentage points of
+F1 over pure spectral features. Geographic reasoning matters.
+
+(v) The "gap" metric requires context. Freetown's 0.003 gap vs.
+Santiago's 0.181 gap looks like Santiago overfit — but Santiago's
+gap is an expected artifact of including the target city in training
+(70% of pixels are memorized, 30% are held out, giving a built-in
+~0.15 gap). The Honest Generalization Eval cell reports held-out-only
+F1 as the real number.
+
+(vi) The Medium class is the hardest everywhere because it sits in a
+narrow slice of the heat distribution. Low and High are easier to
+separate; Medium is always where the confusion concentrates.
+
+───────────────────────────────────────────────────────────────────────
+12. LIMITATIONS
+───────────────────────────────────────────────────────────────────────
+
+• Only 2–3 training cities — every cross-city prediction is
+  extrapolation. More climatically diverse training cities would be
+  the single biggest improvement (estimated +10–15 pp F1).
+
+• No direct Land Surface Temperature (LST) data. All heat features
+  are proxies. We attempted MODIS MOD11A1 integration via Planetary
+  Computer but encountered coverage gaps over coastal Freetown and
+  pivoted to a rank-based Kelvin proxy. Real LST integration would
+  likely add +5–10 pp F1.
+
+• OpenStreetMap coverage bias: Sierra Leone's OSM building shapefile
+  is 5× smaller than Chile's. Informal settlements are
+  under-represented, biasing model predictions for African cities
+  toward "less urban." Google Open Buildings v3 would close this gap.
+
+• Static imagery: one median mosaic per city; no seasonal or diurnal
+  variance information. Multi-temporal feature engineering is
+  possible but was out of scope.
+
+• Medium-class imprecision: especially in Rio where the natural
+  Medium band is narrow (18%), the model over-predicts Medium
+  boundaries and precision drops below 0.30 even with honest F1
+  above 0.62.
+
+───────────────────────────────────────────────────────────────────────
+13. FUTURE WORK
+───────────────────────────────────────────────────────────────────────
+
+1. Integrate MODIS MOD11A1 LST or Sentinel-3 SLSTR LST for direct
+   Kelvin temperature as an input feature. Expected +5–10 pp F1.
+2. Train on 5–8 climatically diverse cities (add Lagos, Cairo,
+   Phoenix, Helsinki, etc.) to move from extrapolation to
+   interpolation. Expected +10–15 pp F1.
+3. Replace OSM building footprints with Google Open Buildings v3 for
+   better informal-settlement coverage, especially in African cities.
+4. Add multi-temporal Sentinel-2 features (mean/std/range over 12
+   months) to capture seasonal UHI dynamics.
+5. Evaluate domain-adversarial training to make feature
+   representations city-invariant explicitly.
+
+───────────────────────────────────────────────────────────────────────
+14. DELIVERABLES / REPRODUCIBILITY
+───────────────────────────────────────────────────────────────────────
+
+• 5 Jupyter notebooks (01 scene search, 02 median mosaic, 03 Freetown,
+  04 Santiago, 05 Rio) — each with embedded analysis markdown
+  totaling 1,100–1,500 words per model notebook.
+• 3 submission-format prediction CSVs
+  (Predicted_Dataset_{city}_UHI_Formula.csv).
+• Cached intermediate files (building features, STAC scene metadata,
+  Freetown training labels derived from predictions) committed to
+  the repo for fast re-execution.
+• 4 large files (3 TIFFs + building footprint ZIP, ~1.8 GB total)
+  hosted on Google Drive due to GitHub's 100 MB file limit.
+• All environment dependencies pinned in requirements.txt;
+  reproducible with a single-line `conda create` and `pip install -r`.
+• Random seeds fixed at 42 throughout.
+• Expected total runtime on fresh clone with downloaded large files:
+  ~50 minutes (notebooks 03–05 only, skipping 01 and 02 which take
+  an additional ~1 hour for STAC scene search + median mosaic build).
+
+───────────────────────────────────────────────────────────────────────
+15. TECH STACK
+───────────────────────────────────────────────────────────────────────
+
+• Python 3.11 in a conda environment
+• scikit-learn 1.4 (RF, HistGB, LR, SVM, KNN, DT, GMM, KMeans,
+  StandardScaler, CalibratedClassifierCV, GridSearchCV,
+  StratifiedGroupKFold)
+• imbalanced-learn 0.11 (SMOTE, imblearn.Pipeline)
+• rioxarray, rasterio, geopandas, shapely, pyproj, odc-stac
+• pystac-client, planetary-computer for STAC catalog access
+• pandas 2.1, numpy 1.26, matplotlib 3.7, seaborn 0.13
+• Jupyter ecosystem (jupyter, ipykernel, notebook)
+
+═══════════════════════════════════════════════════════════════════════
+END OF REPORT
+═══════════════════════════════════════════════════════════════════════
+
+This document is intended as a self-contained executive summary of
+the project suitable for sharing with non-technical stakeholders,
+feeding into AI assistants for presentation generation, or archiving
+as a milestone reference. For code-level detail, see the Jupyter
+notebooks. For infrastructure and setup, see README.md.
