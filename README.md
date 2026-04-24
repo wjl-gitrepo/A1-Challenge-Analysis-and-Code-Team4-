@@ -3,9 +3,10 @@
 Cross-city UHI intensity classification pipeline. Trains on Sentinel-2 satellite imagery + OpenStreetMap building footprints, predicts Low / Medium / High UHI class at geolocated pixels across three climatically diverse cities: **Santiago (Chile)**, **Rio de Janeiro (Brazil)**, and **Freetown (Sierra Leone)**.
 
 > **Quick Navigation**
-> [📥 Data downloads](#-large-data-downloads-required) · [🏗 Architecture](#architecture-overview) · [⚙️ Setup](#setup--local-machine) · [▶️ Running](#running-the-notebooks) · [📊 Results](#results-summary) · [❓ Understanding the numbers](#understanding-the-numbers--faq) · [📖 Glossary](#glossary--key-terms) · [👥 Team](#team)
+> [📥 Data downloads](#-large-data-downloads-required) · [🏗 Architecture](#architecture-overview) · [⚙️ Setup](#setup--local-machine) · [▶️ Running](#running-the-notebooks) · [📊 Results](#results-summary) · [❓ Understanding the numbers](#understanding-the-numbers--faq) · [📖 Glossary](#glossary--key-terms) · [🎤 Presentation](#presentation--supporting-documents) · [👥 Team](#team)
 >
-> 📄 **For a 3-page executive summary of this project** (suitable for presentations, AI tools, or non-technical stakeholders), see [`EXECUTIVE_REPORT.txt`](EXECUTIVE_REPORT.txt).
+> 📄 **For a 3-page executive summary** (suitable for AI tools or non-technical stakeholders), see [`EXECUTIVE_REPORT.txt`](EXECUTIVE_REPORT.txt).
+> 🎤 **For the final presentation deck + speaking script**, see [`Team4_UHI_FINAL.pdf`](Team4_UHI_FINAL.pdf) and [`PRESENTATION_SCRIPT.txt`](PRESENTATION_SCRIPT.txt).
 
 ---
 
@@ -332,9 +333,16 @@ For **Freetown**, we genuinely don't know. `validation_dataset.csv` contains the
 **Repository:** https://github.com/wjl-gitrepo/A1-Challenge-Analysis-and-Code-Team4-
 **Large data (Drive):** https://drive.google.com/drive/folders/1iRNGsAPtl-5oTrhl4qm6jeiZixOH_tfd?usp=sharing
 
+## Presentation & supporting documents
+
+| File | Purpose |
+|---|---|
+| [`Team4_UHI_FINAL.pdf`](Team4_UHI_FINAL.pdf) | Final 10-slide presentation deck (with QR close + 4 backup slides). Used for the in-class delivery. |
+| [`PRESENTATION_SCRIPT.txt`](PRESENTATION_SCRIPT.txt) | Slide-by-slide speaking script aligned to the deck. Includes visual callouts, headline numbers, Q&A anchors, and delivery notes. |
+| [`EXECUTIVE_REPORT.txt`](EXECUTIVE_REPORT.txt) | Self-contained 3-page executive summary — feed into an LLM to regenerate slides, or share with non-technical stakeholders. |
+
 ## Further reading
 
-- [`EXECUTIVE_REPORT.txt`](EXECUTIVE_REPORT.txt) — self-contained 3-page executive summary of the project suitable for non-technical stakeholders, AI assistants (feed it into Claude/ChatGPT/Gemini to generate slides), or archiving.
 - Notebook markdown cells — each of the 5 FINAL notebooks has its own Introduction, Key Components, Recommendations, Conclusion, Bibliography, and Feedback sections (1,000–1,500 words per model notebook, satisfying the assignment rubric).
 
 ## License
