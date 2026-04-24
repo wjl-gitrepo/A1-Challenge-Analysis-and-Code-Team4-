@@ -1,0 +1,112 @@
+# ═══════════════════════════════════════════════════════════════════
+# .gitignore — Business Challenge II (UHI Prediction)
+#
+# PUSH these:
+#   - 5 FINAL notebooks
+#   - README.md, requirements.txt, setup/
+#   - Data/sample_*.csv (labels), Data/validation_dataset.csv (coords)
+#   - Data/Predicted_*.csv (all predictions — final + experimental)
+#   - Data/Freetown_training_from_predictions.csv (derived labels)
+#   - Data/cache/ (building density + LST caches — small, skips slow steps)
+#   - Data/Sierra Leone Building Footprints/ (~36 MB — under GitHub limit)
+#   - _scene_cache/ (STAC pickles), city_data.pkl
+#
+# EXCLUDE these (too large or not needed):
+#   - All TIFFs (>100 MB each — use setup/download_data.py from Drive)
+#   - Chile / Brazil building footprint folders (>100 MB shapefiles)
+#   - Building_Footprint_Data.zip (184 MB)
+#   - Old experimental / backup notebooks
+#   - Rio_Report/, logs, PNG exports, Python caches
+# ═══════════════════════════════════════════════════════════════════
+
+
+# ── Python / OS / IDE ─────────────────────────────────────────────
+__pycache__/
+*.py[codz]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.venv/
+env/
+venv/
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+
+# ── Experimental / backup / obsolete notebooks ────────────────────
+*BACKUP*.ipynb
+*PRE_*.ipynb
+*FIXED_COPY*.ipynb
+*_executed.ipynb
+Challenge_Notebook_01_*.ipynb
+Challenge Notebook  02 - Sample*.ipynb
+Challenge Notebook 03 - Data Preparation*.ipynb
+Model Comparison*.ipynb
+Starter Notebook*.ipynb
+
+# Keep the 5 FINAL notebooks
+!FINAL - *.ipynb
+
+
+# ── Report / run artifacts ────────────────────────────────────────
+Rio_Report/
+Rio_executed.ipynb
+Rio_Report_run.log
+_run_*.py
+_apply_*.py
+_fix_*.py
+_add_*.py
+_patch_*.py
+_comprehensive_*.py
+_batch_output.py
+_boost_high.py
+_make_*.py
+_reapply_*.py
+
+
+# ── Large satellite imagery (download via setup/download_data.py) ─
+S2_median_*.tiff
+sample_*.tiff
+test_*.tiff
+tiff_backup*/
+
+
+# ── Large building footprint data (download separately) ───────────
+# The ZIP (184 MB) exceeds GitHub's 100 MB file limit.
+# Chile and Brazil extracted folders contain .shp files over 100 MB.
+# Sierra Leone folder (~36 MB) IS committed — see below.
+Data/Building_Footprint_Data.zip
+Data/Chile Building Footprints/
+Data/Brazil Building Footprints/
+Data/__MACOSX/
+
+# Explicitly keep Sierra Leone shapefiles (under size limit)
+!Data/Sierra Leone Building Footprints/
+!Data/Sierra Leone Building Footprints/**
+
+
+# ── Root-level PNG exports (notebook-generated visuals) ───────────
+output*.png
+/*.png
+
+# Allow docs images if we add them later
+!docs/*.png
+
+
+# ── Root-level experimental CSV outputs (non-Data/) ───────────────
+/Predicted_Freetown_AdvancedModel.csv
+/Predicted_Freetown_BaseModel.csv
+
+
+# ── Misc ──────────────────────────────────────────────────────────
+*.log
+*.tmp
+Rio_Report_run.log

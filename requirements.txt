@@ -1,0 +1,35 @@
+# Core ML / data
+numpy==1.26.4
+pandas==2.1.4
+scikit-learn==1.4.2
+imbalanced-learn>=0.11
+
+# Geospatial
+rasterio==1.4.2
+rioxarray==0.17.0
+xarray==2025.3.1
+geopandas==1.0.1
+shapely==2.0.6
+pyproj==3.7.0
+odc-stac==0.3.10
+stackstac==0.5.1
+dask==2024.7.0
+
+# STAC catalog (for Notebook 01 / 02)
+pystac==1.11.0
+pystac-client==0.8.5
+planetary-computer==1.0.0
+
+# Visualization
+matplotlib==3.7.5
+seaborn==0.13.2
+
+# Jupyter
+jupyter>=1.0
+ipykernel>=6.25
+notebook>=7.0
+
+# Utilities
+tqdm==4.66.6
+scipy>=1.11
+python-docx>=1.0
