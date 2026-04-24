@@ -1,0 +1,479 @@
+═══════════════════════════════════════════════════════════════════════
+UHI CROSS-CITY — PRESENTATION SCRIPT
+Team 4 · MBAN Elites · Business Challenge II · Hult International
+Deck: "Mapping Heat — Cross-city UHI prediction, blind target"
+═══════════════════════════════════════════════════════════════════════
+
+Format     : 10 main slides (+ QR close + 4 backup), ~8 minutes, ~1,050 words
+Pacing     : ~130 words per minute (deliberate, stat emphasis)
+Speakers   : Jainam · Rashad · Woo Jin · Otelima · Shun
+
+Time allocation:
+  Jainam    — Slides 1, 2, 10              (~2 min 20 s total)
+  Rashad    — Slides 3, 4                   (~1 min 20 s total)
+  Woo Jin   — Slides 5, 6                   (~1 min 35 s total)
+  Otelima   — Slides 7, 8                   (~1 min 45 s total)
+  Shun      — Slides 9a, 9b                 (~1 min 05 s total)
+                                              ───────────────
+                                              ~8 min 05 s
+
+
+═══════════════════════════════════════════════════════════════════════
+SLIDE 1 — TITLE                                    Jainam · ~20s
+"Mapping Heat — Cross-city UHI prediction, blind target"
+═══════════════════════════════════════════════════════════════════════
+
+[Visible on slide: headline result box — "Freetown blind target.
+ F1 macro = 0.689. Train/Test gap = 0.003." + team names.]
+
+Good afternoon. We're Team 4, MBAN Elites.
+
+One question drove this project: can a model trained on two cities
+predict urban heat in a third it has never seen? Our headline, up
+front — on Freetown, our blind target, we reached an F1 macro of
+**0.689**, with a train–test gap of **0.003**.
+
+That gap is the story. Let me tell you why it matters.
+
+
+═══════════════════════════════════════════════════════════════════════
+SLIDE 2 — THREE CITIES, THREE CLIMATES             Jainam · ~65s
+"Three cities. Three climates. One generalization test."
+═══════════════════════════════════════════════════════════════════════
+
+[Visible on slide: three stat cards — "~739" (Chicago 1995),
+ "61,672" (Europe 2022), "3 cities" (Rio, Santiago, Freetown),
+ with academic citations at the bottom of the slide.]
+
+Heat is not a weather problem. It's a design problem.
+
+In 1995, a five-day heatwave killed roughly **739 people** in Chicago.
+Twenty-seven years later, summer 2022, heat killed **61,672 people**
+across Europe — inside one of the most advanced healthcare systems
+on earth. GDP did not protect them. Urban form did not protect them.
+
+  [PAUSE after "GDP did not protect them" — the stat needs air.]
+
+We picked three cities to stress-test generalization. Rio, Santiago,
+Freetown. Three climate zones. Two are labeled. Freetown is blind —
+no ground truth, no calibration. Just the model, the pixels, and
+the city.
+
+That's not interpolation. That's extrapolation. And it's the same
+problem that exists for almost every African city without a sensor
+network.
+
+Rashad will take you through the data.
+
+
+═══════════════════════════════════════════════════════════════════════
+SLIDE 3 — DATA SOURCES                             Rashad · ~40s
+"Satellite bands, building polygons, ground labels"
+═══════════════════════════════════════════════════════════════════════
+
+[Visible on slide: three-column card layout — Sentinel-2 L2A,
+ OpenStreetMap footprints, Ground-truth labels.]
+
+Three public inputs.
+
+**One** — Sentinel-2 L2A imagery. Fifteen spectral bands at
+ten-meter resolution, fifteen cloud-filtered scenes per city,
+compiled into a median mosaic via the Microsoft Planetary Computer.
+
+**Two** — OpenStreetMap building footprints. Chile 191 MB. Brazil
+151 MB. Sierra Leone just 36 MB. A known bias — we'll come back to it.
+
+**Three** — ground-truth UHI labels from the sponsor. Santiago has
+14,000 points. Rio has 21,000. Freetown has coordinates only. That's
+the test.
+
+
+═══════════════════════════════════════════════════════════════════════
+SLIDE 4 — THE PIPELINE                             Rashad · ~40s
+"Five notebooks. One pipeline. One target at a time."
+═══════════════════════════════════════════════════════════════════════
+
+[Visible on slide: 5 notebook cards (01 Scene search → 02 Median
+ mosaic → 03 Freetown / 04 Santiago / 05 Rio). Bottom panel lists
+ what's "inside each target notebook" (32 features, per-city norm,
+ spatial-block CV, soft-voting ensemble, Phase 4A).]
+
+Five notebooks, one pipeline. Notebooks 1 and 2 search scenes and
+build the mosaic. Notebooks 3 through 5 each target one city.
+
+The code is identical. Only the training configuration changes.
+Freetown trains on Santiago plus Rio. Santiago and Rio use mixed
+training across all three.
+
+Inside every notebook: 32 per-pixel features, per-city normalization,
+spatial-block cross-validation, and a soft-voting ensemble — Random
+Forest, HistGradientBoosting, Logistic Regression at weights 2-to-2-to-1.
+
+Woo Jin will walk you through why those features matter.
+
+
+═══════════════════════════════════════════════════════════════════════
+SLIDE 5 — 32 FEATURES, FIVE TIERS                  Woo Jin · ~55s
+"Thirty-two features across five tiers"
+═══════════════════════════════════════════════════════════════════════
+
+[Visible on slide: five tier rows (Classical spectral · Advanced
+ spectral · Physical composites · Building geometry · Geo-aware
+ context) with feature counts 3/8/6/7/11. Right panel: "THE
+ BREAKTHROUGH — Geo-aware context" with the 0.58 → 0.689 lift.]
+
+Thirty-two features, five tiers.
+
+Tiers one through three are spectral — NDVI, NDBI, NDWI, then
+advanced indices, then physical composites like urban_heat and
+veg_cooling. Tier four is building geometry from OSM.
+
+Tier five — eleven features — is where the model becomes honest.
+These encode *where a pixel sits*. Distance to coast. Distance to
+forest. Distance to city center. Local urban fraction in a 500-meter
+window. Local vegetation fraction. One-hot land-use class.
+
+  [SLOW DOWN on the next sentence — this is the technical lift
+   worth claiming.]
+
+Before this layer, Freetown honest F1 was **0.58**. After: **0.689**.
+An eleven-point lift from teaching the model geography.
+
+A pixel in downtown Santiago and a pixel in downtown Freetown can
+have identical NDVI. They do not have identical geography. The model
+needed both.
+
+
+═══════════════════════════════════════════════════════════════════════
+SLIDE 6 — TWO DESIGN CHOICES                       Woo Jin · ~40s
+"Per-city normalization plus spatial-block cross-validation"
+═══════════════════════════════════════════════════════════════════════
+
+[Visible on slide: two cards side by side — "01 Per-city
+ normalization" and "02 Spatial-block cross-validation" — with a
+ footer banner "These two choices together lift Freetown honest F1
+ by roughly ten points over the naive baseline."]
+
+Two design choices make this work.
+
+**Per-city z-score normalization.** Raw NDVI in arid Santiago is
+not raw NDVI in tropical Freetown. After normalization, the model
+learns "hotter than this city's own mean" — not absolute thresholds
+that break across climates.
+
+**Spatial-block cross-validation.** A random pixel split looks
+beautiful and lies — adjacent pixels leak between train and test.
+We cluster into 60 geographic KMeans blocks and hold out whole
+blocks. CV scores stop lying.
+
+Together, these two choices are worth roughly ten F1 points. Otelima
+will cover how we handle Freetown's missing labels.
+
+
+═══════════════════════════════════════════════════════════════════════
+SLIDE 7 — PHYSICS-ANCHORED PSEUDO-LABELING         Otelima · ~55s
+"Physics-anchored stratified pseudo-labeling"
+═══════════════════════════════════════════════════════════════════════
+
+[Visible on slide: four-step flow — 01 RANK · 02 FORCE-BALANCE ·
+ 03 FILTER · 04 RETRAIN — followed by a "PSEUDO-LABELS GENERATED"
+ row with per-city counts (Freetown 7,978 · Santiago 7,229 · Rio
+ 13,786).]
+
+Freetown has no labels. So how do we give the model Freetown-specific
+signal?
+
+Four steps.
+
+**Rank.** Every pixel in the target city gets scored by a physical
+heat composite.
+
+**Force-balance.** Top 15% become pseudo-High. Bottom 15%, pseudo-Low.
+Middle 15% around the median, pseudo-Medium. Physics picks the class
+balance — not model confidence. That matters. Confidence-based
+pseudo-labels always collapse to the majority class. Ours cannot.
+
+**Filter.** Keep only labels the current model already predicts at
+20% probability or higher.
+
+**Retrain.** Weight 0.30, two rounds.
+
+Result: roughly **8,000 useful pseudo-labels for Freetown**. The
+model learns the shape of Freetown without ever being told the
+answer.
+
+
+═══════════════════════════════════════════════════════════════════════
+SLIDE 8 — THE HONEST SCORECARD                     Otelima · ~50s
+"One honest scorecard, three cities"
+═══════════════════════════════════════════════════════════════════════
+
+[Visible on slide: 3-row table — Freetown (Blind, Gap 0.003,
+ Honest F1 0.689), Santiago (Mixed, 0.181, 0.549, vs-labels
+ 0.576), Rio (Mixed, 0.177, 0.625, vs-labels 0.626). Freetown
+ row highlighted in cream; the 0.689 is boxed in orange.]
+
+One table. Read the Freetown row first.
+
+Train–test gap: **0.003**. Honest F1 on blind held-out blocks:
+**0.689**. No target labels seen. No overfit signal.
+
+Santiago and Rio show larger gaps — around 0.18 — because they sit
+inside the mixed training set. That's an expected artifact, not
+overfitting. Our honest-generalization column strips it out:
+Santiago **0.549**, Rio **0.625**.
+
+Freetown — the hardest test — delivered the cleanest result.
+
+Shun will show you what that looks like on the ground.
+
+
+═══════════════════════════════════════════════════════════════════════
+SLIDE 9 — FREETOWN PREDICTIONS vs SATELLITE        Shun · ~40s
+"Freetown: model predictions vs satellite physics"
+═══════════════════════════════════════════════════════════════════════
+
+[Visible on slide: two map panels (left = satellite heat proxy
+ with NDBI−NDVI coloring; right = same Freetown coastline with
+ prediction overlay). Four caption boxes beneath: SATELLITE HEAT,
+ PREDICTION, OVERLAY, DISAGREEMENT. Footer: "Where we disagree
+ concentrates on transitional Medium pixels, not on the urban /
+ rural boundary."]
+
+Numbers are one thing. Here's what the model actually sees.
+
+Left: satellite heat proxy — NDBI minus NDVI.
+Middle: our Freetown predictions.
+Right: the overlay.
+
+Agreement with an independent physics proxy: **65.9%**.
+
+And where we disagree is not random. It concentrates on transitional
+Medium pixels — the hardest class to call. Not on the urban–rural
+boundary, which is exactly where a model trained on two other cities
+would most likely fail.
+
+That's the kind of error we're willing to own.
+
+
+═══════════════════════════════════════════════════════════════════════
+SLIDE 10 — SANTIAGO & RIO APPLICATION              Shun · ~25s
+"Santiago & Rio: model application & testing"
+═══════════════════════════════════════════════════════════════════════
+
+[Visible on slide: two pairs of city maps (Rio left, Santiago
+ right), each showing "Actual" on top and "Prediction model" on
+ bottom, separated by a "Vs" label. Footer: "Where the model is
+ trained on its own predicted dataset and preserves its intent to
+ generalize raw data aiming min. gap, max F1 & accuracy."]
+
+Same pipeline, same code, applied back to Santiago and Rio. Actual
+on top, predicted below.
+
+The model preserves its intent — minimum gap, maximum F1, honest
+transfer. One pipeline. Three cities. No per-climate retraining.
+
+
+═══════════════════════════════════════════════════════════════════════
+SLIDE 11 — SHIP, LIMITS, NEXT                      Jainam · ~55s
+"What we ship, what we cannot, what comes next"
+═══════════════════════════════════════════════════════════════════════
+
+[Visible on slide: three-column panel — WHAT WE SHIP (3 items),
+ HONEST LIMITS (3 items), NEXT STEPS (3 items). Footer banner:
+ "One pipeline. Three cities. An honest number and a clear path
+ to a better one."]
+
+**What we ship.** Freetown predictions at honest F1 0.689. A
+reproducible pipeline — one conda environment, five notebooks,
+random seed 42. A three-page executive summary.
+
+**What we can't claim.** Medium is a narrow in-between class —
+precision drops there. Our mosaic is one dry-season snapshot. OSM
+is five times sparser in Sierra Leone than in Chile.
+
+**What comes next.** Direct land-surface temperature from MODIS or
+Sentinel-3 — five to ten F1 points on the table. More training
+cities to turn extrapolation into interpolation. And Google Open
+Buildings v3 for better coverage of informal settlements.
+
+One pipeline. Three cities. An honest number — and a clear path
+to a better one.
+
+Thank you.
+
+
+═══════════════════════════════════════════════════════════════════════
+SLIDE 12 — CURIOUS? SCAN HERE                      Jainam / all · close
+(Q&A / closing visual)
+═══════════════════════════════════════════════════════════════════════
+
+[Visible on slide: large QR code centered, title "Curious? Scan
+ Here!!!" — opens the GitHub repo and data Drive folder for
+ anyone in the audience who wants to see the code and data.]
+
+No spoken script — this is the visual closer while Q&A opens.
+If someone asks what's in the repo during Q&A:
+
+  "Five notebooks, prediction CSVs, the executive report, a README
+   with a glossary, and a setup script that pulls the ~1.8 GB of
+   large files from Google Drive. Random seed 42, one conda
+   environment, reproducible in about 50 minutes."
+
+
+═══════════════════════════════════════════════════════════════════════
+BACKUP SLIDES — pull in if Q&A probes mechanism or generalization
+═══════════════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BACKUP A — "Heat follows airflow" (wind/foehn hypotheses)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Use if asked: "What physical mechanism explains the hot pixels?"
+
+Two testable hypotheses, framed explicitly as hypotheses.
+
+**Hypothesis α — Foehn-override.** Vegetated zones downwind of the
+eastern hills still register High UHI. Interpretation: mountain-lee
+descending flow may suppress evapotranspirative cooling. Test:
+local weather stations × wind-vector overlay.
+
+**Hypothesis β — Wind-corridor × density.** At equal built density,
+sea-breeze-facing blocks run cooler than sheltered ones. Street
+orientation and LiDAR heights may gate sea-breeze penetration.
+Test: building-height model × dominant street azimuth.
+
+Framing note: these are field-testable hypotheses we derived from
+map inspection, not conclusions from the model output.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BACKUP B — "Heat follows form" (urban composition hypotheses)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Use if asked: "What urban-form features explain the variation?"
+
+Three hypotheses (derived from Google Earth overlay inspection,
+not model output):
+
+**Hypothesis γ — Impervious-surface composition.** High-asphalt
+ratio associates with High-class pixels within "built-up" zones.
+
+**Hypothesis δ — Intersection micro-hotspots.** Local High spots
+cluster at major-road intersections — plausibly signal-idling heat.
+
+**Hypothesis ε — Urban form > green cover.** Low-NDVI blocks with
+favorable canyon geometry stay in Medium. If confirmed, this
+inverts the "plant more trees citywide" recommendation — ship these
+as pilots, not policies.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BACKUP C — "Top 5 Features — Random Forest"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Use if asked: "What actually drives the predictions?"
+
+Horizontal bar chart, values from the RF model:
+
+  1. local_urban_frac_500m ... 0.222
+  2. dist_to_center_km ....... 0.170
+  3. building_density_100m ... 0.077
+  4. local_veg_frac_500m ..... 0.076
+  5. veg_cooling ............. 0.061
+
+One-line headline: *urban form and distance-to-center dominate —
+the built environment is the signal, not pure spectral indices.*
+
+Implication: the model agrees with urban-climatology literature
+that built-environment composition, not vegetation presence alone,
+is the primary driver of within-city UHI variation.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BACKUP D — "2018 / Our Model / 2030"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Use if asked: "How does your model compare to published UHI maps,
+or: will this pattern hold under climate change?"
+
+Three-panel comparison for Freetown:
+
+• **2018 panel** — published urban heat map from literature
+  (pre-existing municipal or academic product).
+• **Our model** — Team 4 prediction on the same geography.
+• **2030 panel** — projected urban heat under climate-change
+  scenarios, with the scale bar showing 22°C (Low) to 37°C (High).
+
+Framing: our 2026 prediction sits between the 2018 observation and
+the 2030 projection in terms of spatial pattern. Shows the model is
+consistent with the *direction* of observed climate change in the
+region, without being trained on temporal data.
+
+
+═══════════════════════════════════════════════════════════════════════
+DELIVERY NOTES
+═══════════════════════════════════════════════════════════════════════
+
+• Hit the **0.689** and **0.003** numbers hard — on slide 1 AND
+  slide 8. They're the pitch.
+
+• On slide 2, pause after "GDP did not protect them." The stat
+  needs air.
+
+• On slide 5, slow down on the 0.58 → 0.689 transition. That's the
+  technical lift worth claiming.
+
+• Keep transitions clean: end each speaker's segment with the next
+  speaker's name or topic. Avoid "next up" filler.
+
+• Eye contact > slide reading. Each speaker should know their two
+  slides word-for-word; the slides are the visual anchor, not the
+  teleprompter.
+
+• On slide 12 (QR code closing visual), let it sit silently while
+  Q&A opens. Do not talk over it.
+
+• If running long: cut the Chicago/Europe death statistics on
+  slide 2 (but only if absolutely needed — they land the emotional
+  stakes that make the technical work mean something).
+
+• If a grader asks about mechanism: pivot to Backup A (wind) or B
+  (urban form). Both are framed as hypotheses, not findings — stay
+  disciplined about that distinction.
+
+• If a grader asks about feature importance or what drives the
+  model: Backup C has the exact numbers (local_urban_frac_500m
+  0.222, dist_to_center_km 0.170). Lead with "urban form beats
+  spectral signals."
+
+
+═══════════════════════════════════════════════════════════════════════
+HEADLINE NUMBERS (for quick recall)
+═══════════════════════════════════════════════════════════════════════
+
+Freetown (blind target):     F1 = 0.689   Gap = 0.003
+Santiago (honest holdout):   F1 = 0.549   F1 vs actual = 0.576
+Rio (honest holdout):        F1 = 0.625   F1 vs actual = 0.626
+
+Feature count:               32 (+1 city indicator in mixed scenarios)
+Training cities (Freetown):  2 (Santiago + Rio)
+Training cities (S/R):       3 (mixed)
+Spatial blocks:              60 KMeans clusters
+Ensemble:                    RF + HistGB + LR, weights [2, 2, 1]
+Phase 4A rounds:             2 (force-balanced pseudo-labels)
+Phase 4A pseudo-label count: 7,978 Freetown · 7,229 Santiago · 13,786 Rio
+Feature-importance leaders:  local_urban_frac_500m (0.222),
+                             dist_to_center_km (0.170)
+Freetown model↔physics agreement:  65.9%
+
+
+═══════════════════════════════════════════════════════════════════════
+END OF SCRIPT
+═══════════════════════════════════════════════════════════════════════
+
+This document is the companion script for Team 4's 10-slide
+"Mapping Heat" presentation (plus QR close + 4 backup slides)
+for the A1 Challenge Analysis presentation at Hult International
+Business School, Spring 2026.
+
+Repository:        https://github.com/wjl-gitrepo/A1-Challenge-Analysis-and-Code-Team4-
+Executive Report:  EXECUTIVE_REPORT.txt (in the repo root)
+README:            README.md (in the repo root)
